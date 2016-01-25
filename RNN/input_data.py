@@ -1,4 +1,7 @@
 import codecs
+import numpy as np
+from collections import Counter
+import itertools
 import gensim
 def singleton(cls, *args, **kw):
     instances = {}
@@ -36,7 +39,7 @@ def pad_sentences(sentences, labels, padding_word="<PAD/>"):
         label = labels[i]
         num_padding = sequence_length - len(sentence)
         new_sentence = sentence + [padding_word] * num_padding
-        new_labels = label + [0] * new_padding
+        new_labels = label + [0] * num_padding
         padded_sentences.append(new_sentence)
         padded_labels.append(new_labels);
     return padded_sentences, padded_labels
@@ -77,19 +80,31 @@ def load_data_and_labels():
 
 def load_data():
     x, y = load_data_and_labels()
-    pad_sentence, pad_labels = pan_senteces(x);
+    pad_sentence, pad_labels = pad_sentences(x, y);
 
     voc, voc_inv = build_vocab(pad_sentence);
 
     x = np.array([[voc[word] for word in sentence] for sentence in pad_sentence])
-    y = np.array(labels)
-    vv = np.random.uniform(-1.0,1.0, len(vocabulary)*400);
-    W = np.float32(vv.reshape(len(vocabulary), 400));
+    y = np.array(pad_labels)
+    vv = np.random.uniform(-1.0,1.0, len(voc)*400);
+    W = np.float32(vv.reshape(len(voc), 400));
 
-    for i in vocabulary.keys():
+    for i in voc.keys():
         v = get_word_vector(i);
         if v is not None:
-            W[vocabulary[i]] = v;
-    return [x, y, vocabulary, vocabulary_inv, W]
+            W[voc[i]] = v;
+    return [x, y, voc, voc_inv, W]
 
 x,y,voc, voc_inv, w = load_data();
+for key in voc_inv:
+    print key.encode("utf-8");
+
+print "------"
+
+for p in x:
+    print x
+
+print "-----------"
+
+for k in w:
+    print k;
