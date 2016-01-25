@@ -11,15 +11,15 @@ for line in labled_object:
     for i, word in enumerate(seg_list):
         w = word.strip();
         arr = w.split("*")
-        if len(arr) == 1:
-            list.append(0);
+        if len(arr) == 1 and len(w) > 0:
+            list.append("0");
             sentence.append(w);
         else:
             if len(arr[0]) == 0:
-                list[-1] = 1;
-            else:
+                list[-1] = "1";
+            else
                 sentence.append(arr[0])
-                list.append(1)
+                list.append("1")
 
             if not len(arr[1]) == 0:
                 sentence.append(arr[1])
