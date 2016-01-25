@@ -12,16 +12,16 @@ for line in labled_object:
         w = word.strip();
         arr = w.split("*")
         if len(arr) == 1:
-            list.Append(0);
-            sentence.Append(w);
+            list.append(0);
+            sentence.append(w);
         else:
             if len(arr[0]) == 0:
                 list[-1] = 1;
             else:
-                sentence.Append(arr[0])
-                list.Append(1)
+                sentence.append(arr[0])
+                list.append(1)
 
             if not len(arr[1]) == 0:
-                sentence.Append(arr[1])
+                sentence.append(arr[1])
 
     output_file.write(" ".join(sentence).encode("utf-8") + "\t" + " ".join(list));
