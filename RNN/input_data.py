@@ -77,7 +77,15 @@ def load_data_and_labels():
     x_text = [s.split(" ") for s in sent]
     y_list = [s.split(" ") for s in lables]
 
-    return x_text, y_list
+    y = []
+    for la in y_list:
+        p = []
+        for l in la:
+            ve = np.zeros(2);
+            ve[int(l)] = 1;
+            p.append(ve)
+        y.append(p);
+    return x_text, y
 
 def load_data():
     x, y = load_data_and_labels()
@@ -96,8 +104,8 @@ def load_data():
             W[voc[i]] = v;
     return [x, y, voc, voc_inv, W]
 
-x,y,voc, voc_inv, w = load_data();
-for key in voc_inv:
+#x,y,voc, voc_inv, w = load_data();
+'''for key in voc_inv:
     print key.encode("utf-8");
 
 print "------"
@@ -108,5 +116,5 @@ for p in x:
 print "-----------"
 
 for k in w:
-    print k;
+    print k;'''
 
