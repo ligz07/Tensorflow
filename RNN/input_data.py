@@ -15,6 +15,7 @@ class MyClass4(object):
         self.model =  gensim.models.Word2Vec.load("/home/guanglei/word2vec/wiki.zh.text.model");
 
 def get_word_vector(key):
+    return None
     class1 = MyClass4();
     model = class1.model;
     try:
