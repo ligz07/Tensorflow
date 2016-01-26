@@ -65,7 +65,7 @@ def load_data_and_labels():
     lable_inv = [];
     sent = []
     lables = []
-    file_object = codecs.open("data/output","r", "utf-8").readlines();
+    file_object = codecs.open("data/output.small","r", "utf-8").readlines();
     for line in file_object:
         arr = line.split("\t");
         if len(arr) < 2:

@@ -11,11 +11,17 @@ class RNN(object):
         self.output_data = tf.placeholder(tf.int32, [batch_size, sequece_length, num_classes], name = "output_data")
 
         input_refine = [tf.squeeze(input_, [1]) for input_ in tf.split(1, sequece_length, self.input_data)]
+        self.inputs = []
         with tf.device("/cpu:0"):
-              embedding = tf.get_variable("embedding", [vocab_size, embedding_size])
-              inputs = tf.nn.embedding_lookup(embedding, input_refine)
-        state = rnncell.zero_state(batch_size)
-        self.output, self.states = rnn.rnn(rnnCell, inputs, initial_state = state)
+            embedding = tf.get_variable("embedding", [vocab_size, embedding_size])
+            
+            for i, v in enumerate(input_refine):
+                self.inputs.append(tf.nn.embedding_lookup(embedding, input_refine[i]))
+                
+            #inputs = tf.nn.embedding_lookup(embedding, input_refine[0])
+        #self.inputs = np.array(self.inputs) 
+        state = rnnCell.zero_state(batch_size, tf.float32)
+        self.output, self.states = rnn.rnn(rnnCell, self.inputs, initial_state = state)
 
         with tf.name_scope("result"):
             W = tf.Variable(tf.truncated_normal([embedding_size, num_classes], stddev=0.1), name="W")
@@ -55,6 +61,7 @@ batch_size = 10
 embedding_size = 400;
 num_classes = 2;
 sequece_length = len(x[0]);
+em = tf.Variable(w, name="embedding")
 with tf.Graph().as_default():
     rnnobject = RNN(vocab_size,batch_size, sequece_length, embedding_size, num_classes)
     optimizer = tf.train.GradientDescentOptimizer(0.1)
