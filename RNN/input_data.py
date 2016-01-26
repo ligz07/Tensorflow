@@ -65,7 +65,7 @@ def load_data_and_labels():
     lable_inv = [];
     sent = []
     lables = []
-    file_object = codecs.open("data/output.small","r", "utf-8").readlines();
+    file_object = codecs.open("data/output.small","r", "utf-8")
     for line in file_object:
         arr = line.split("\t");
         if len(arr) < 2:
@@ -77,15 +77,7 @@ def load_data_and_labels():
     x_text = [s.split(" ") for s in sent]
     y_list = [s.split(" ") for s in lables]
 
-    y = []
-    for la in y_list:
-        p = []
-        for l in la:
-            ve = np.zeros(2);
-            ve[int(l)] = 1;
-            p.append(ve)
-        y.append(p);
-    return x_text, y
+    return x_text, y_list
 
 def load_data():
     x, y = load_data_and_labels()
@@ -93,8 +85,17 @@ def load_data():
 
     voc, voc_inv = build_vocab(pad_sentence);
 
+    y_list = []
+    for la in pad_labels:
+        p = []
+        for l in la:
+            ve = [0]*2;
+            ve[int(l)] = 1;
+            p.append(ve)
+        y_list.append(p);
+ 
     x = np.array([[voc[word] for word in sentence] for sentence in pad_sentence])
-    y = np.array(pad_labels)
+    y = np.array(y_list)
     vv = np.random.uniform(-1.0,1.0, len(voc)*400);
     W = np.float32(vv.reshape(len(voc), 400));
 

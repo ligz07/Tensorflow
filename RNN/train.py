@@ -6,9 +6,9 @@ class RNN(object):
     def __init__(self, vocab_size, batch_size, sequece_length, embedding_size, num_classes):
 
         rnnCell = rnn_cell.BasicRNNCell(embedding_size)
-        self.input_data = tf.placeholder(tf.int32, shape=[batch_size, sequece_length], name = "input_data")
+        self.input_data = tf.placeholder(tf.int32, shape=[None, sequece_length], name = "input_data")
 
-        self.output_data = tf.placeholder(tf.int32, [batch_size, sequece_length, num_classes], name = "output_data")
+        self.output_data = tf.placeholder(tf.float32, [None, sequece_length, num_classes], name = "output_data")
 
         input_refine = [tf.squeeze(input_, [1]) for input_ in tf.split(1, sequece_length, self.input_data)]
         self.inputs = []
@@ -20,36 +20,38 @@ class RNN(object):
                 
             #inputs = tf.nn.embedding_lookup(embedding, input_refine[0])
         #self.inputs = np.array(self.inputs) 
-        state = rnnCell.zero_state(batch_size, tf.float32)
-        self.output, self.states = rnn.rnn(rnnCell, self.inputs, initial_state = state)
+#        state = rnnCell.zero_state(batch_size, tf.float32)
+        self.output, self.states = rnn.rnn(rnnCell, self.inputs, dtype=tf.float32)
 
+        scores = [];
+        self.predictions = [];
         with tf.name_scope("result"):
             W = tf.Variable(tf.truncated_normal([embedding_size, num_classes], stddev=0.1), name="W")
             b = tf.Variable(tf.constant(0.1, shape=[num_classes]), name="b")
-            self.scores = [];
-            self.predictions = [];
             for i in self.output:
-                scores =   tf.nn.xw_plus_b(i, W, b, name="scores")
-                self.scores.append(scores);
-                prediction = tf.argmax(scores, 1);
+                score =   tf.nn.xw_plus_b(i, W, b, name="score")
+                scores.append(score);
+                prediction = tf.argmax(score, 1);
                 self.predictions.append(prediction)
-
+        self.scores = tf.concat(1, scores)
+        losses = 0;
         with tf.name_scope("loss"):
-            for i in self.scores:
-                losses += tf.nn.softmax_cross_entropy_with_logits(i, self.output_data)
+            output_refine = [tf.squeeze(k, [1]) for k in tf.split(1, sequece_length, self.output_data)]
+            for i, v in enumerate(scores):
+                losses += tf.nn.softmax_cross_entropy_with_logits(scores[i], output_refine[i])
             self.loss = tf.reduce_mean(losses)
 
-def batch_iter(data, batch_size, num_epochs):
+def batch_iter(in_data, batch_size, num_epochs):
     """
     Generates a batch iterator for a dataset.
     """
-    data = np.array(data)
+    data = in_data
     data_size = len(data)
     num_batches_per_epoch = int(len(data)/batch_size) + 1
     for epoch in range(num_epochs):
         # Shuffle the data at each epoch
-        shuffle_indices = np.random.permutation(np.arange(data_size))
-        shuffled_data = data[shuffle_indices]
+        #shuffle_indices = np.random.permutation(np.arange(data_size))
+        shuffled_data = data
         for batch_num in range(num_batches_per_epoch):
             start_index = batch_num * batch_size
             end_index = min((batch_num + 1) * batch_size, data_size)
@@ -57,7 +59,7 @@ def batch_iter(data, batch_size, num_epochs):
 
 x,y,voc, voc_inv, w = load_data();
 vocab_size = len(voc_inv);
-batch_size = 10
+batch_size = 2
 embedding_size = 400;
 num_classes = 2;
 sequece_length = len(x[0]);
@@ -74,8 +76,13 @@ with tf.Graph().as_default():
         sess.run(init)
 
         batches = batch_iter(zip(x, y), batch_size, 1)
+        i = 0;
         for batch in batches:
             x_batch, y_batch = zip(*batch)
+            x_batch = np.array(x_batch);
+            y_batch = np.array(y_batch);
             feed_dict = {rnnobject.input_data:x_batch, rnnobject.output_data:y_batch}
-            _, loss_value = sess.run([train_op, rnn.loss],
+            _, loss_value,p = sess.run([train_op, rnnobject.loss, rnnobject.scores],
                                  feed_dict=feed_dict)
+            print loss_value
+            print p
