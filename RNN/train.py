@@ -4,8 +4,8 @@ from tensorflow.models.rnn import rnn
 from input_data import *
 class RNN(object):
     def __init__(self, vocab_size, batch_size, sequece_length, embedding_size, num_classes):
-
-        rnnCell = rnn_cell.BasicRNNCell(embedding_size)
+        hidden_num = 30
+        rnnCell = rnn_cell.BasicRNNCell(hidden_num)
         self.input_data = tf.placeholder(tf.int32, shape=[None, sequece_length], name = "input_data")
 
         self.output_data = tf.placeholder(tf.float32, [None, sequece_length, num_classes], name = "output_data")
@@ -26,14 +26,15 @@ class RNN(object):
         scores = [];
         self.predictions = [];
         with tf.name_scope("result"):
-            W = tf.Variable(tf.truncated_normal([embedding_size, num_classes], stddev=0.1), name="W")
+            W = tf.Variable(tf.truncated_normal([hidden_num, num_classes], stddev=0.1), name="W")
             b = tf.Variable(tf.constant(0.1, shape=[num_classes]), name="b")
             for i in self.output:
-                score =   tf.nn.xw_plus_b(i, W, b, name="score")
+                score = tf.nn.xw_plus_b(i, W, b, name="score")
                 scores.append(score);
                 prediction = tf.argmax(score, 1);
                 self.predictions.append(prediction)
-        self.scores = tf.concat(1, scores)
+
+        self.scores = tf.reshape(tf.concat(1, scores), [batch_size, sequece_length, num_classes])
         losses = 0;
         with tf.name_scope("loss"):
             output_refine = [tf.squeeze(k, [1]) for k in tf.split(1, sequece_length, self.output_data)]
@@ -59,7 +60,7 @@ def batch_iter(in_data, batch_size, num_epochs):
 
 x,y,voc, voc_inv, w = load_data();
 vocab_size = len(voc_inv);
-batch_size = 2
+batch_size = 3
 embedding_size = 400;
 num_classes = 2;
 sequece_length = len(x[0]);
