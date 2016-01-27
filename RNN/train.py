@@ -24,7 +24,7 @@ class RNN(object):
         self.output, self.states = rnn.rnn(rnnCell, self.inputs, dtype=tf.float32)
 
         scores = [];
-        self.predictions = [];
+        predictions = [];
         with tf.name_scope("result"):
             W = tf.Variable(tf.truncated_normal([hidden_num, num_classes], stddev=0.1), name="W")
             b = tf.Variable(tf.constant(0.1, shape=[num_classes]), name="b")
@@ -32,9 +32,11 @@ class RNN(object):
                 score = tf.nn.xw_plus_b(i, W, b, name="score")
                 scores.append(score);
                 prediction = tf.argmax(score, 1);
-                self.predictions.append(prediction)
-
-        self.scores = tf.reshape(tf.concat(1, scores), [batch_size, sequece_length, num_classes])
+                predictions.append(prediction)
+       
+        self.scores = tf.reshape(tf.concat(1, scores), [-1, sequece_length, num_classes])
+        self.sco = tf.concat(0, scores);
+        self.predictions = tf.concat(0, predictions);
         losses = 0;
         with tf.name_scope("loss"):
             output_refine = [tf.squeeze(k, [1]) for k in tf.split(1, sequece_length, self.output_data)]
@@ -75,7 +77,6 @@ with tf.Graph().as_default():
     with sess.as_default():
         init = tf.initialize_all_variables()
         sess.run(init)
-
         batches = batch_iter(zip(x, y), batch_size, 1)
         i = 0;
         for batch in batches:
@@ -83,7 +84,13 @@ with tf.Graph().as_default():
             x_batch = np.array(x_batch);
             y_batch = np.array(y_batch);
             feed_dict = {rnnobject.input_data:x_batch, rnnobject.output_data:y_batch}
-            _, loss_value,p = sess.run([train_op, rnnobject.loss, rnnobject.scores],
-                                 feed_dict=feed_dict)
+            _, loss_value,a,b,c = sess.run([train_op, 
+                                            rnnobject.loss, 
+                                            rnnobject.scores,
+                                            rnnobject.sco,
+                                            rnnobject.predictions ],
+                                            feed_dict=feed_dict)
             print loss_value
-            print p
+            print a
+            print b
+            print c
