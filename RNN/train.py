@@ -7,9 +7,9 @@ class RNN(object):
     def __init__(self, vocab_size, batch_size, sequece_length, embedding_size, num_classes):
         hidden_num = 30
         rnnCell = rnn_cell.BasicRNNCell(hidden_num)
-        self.input_data = tf.placeholder(tf.int32, shape=[None, sequece_length], name = "input_data")
+        self.input_data = tf.placeholder(tf.int32, shape=[batch_size, sequece_length], name = "input_data")
 
-        self.output_data = tf.placeholder(tf.int32, [None, sequece_length], name = "output_data")
+        self.output_data = tf.placeholder(tf.int32, [batch_size, sequece_length], name = "output_data")
 
         input_refine = [tf.squeeze(input_, [1]) for input_ in tf.split(1, sequece_length, self.input_data)]
         self.inputs = []
@@ -27,15 +27,16 @@ class RNN(object):
             output = tf.reshape(tf.concat(1, self.output), [-1, hidden_num])
             logits = tf.matmul(output, W) + b
             self.scores = logits
-            self.new_scores = tf.reshape(tf.concat(0, [tf.squeeze(k, [1]) for k in tf.split(1, sequece_length, tf.reshape(logits, [-1, sequece_length ,num_classes]))]), [sequece_length, -1, num_classes])
+            self.new_scores = [tf.squeeze(k, [1]) for k in tf.split(1, sequece_length, tf.reshape(logits, [-1, sequece_length ,num_classes]))]
 
         losses = 0;
         accuracy = []
         with tf.name_scope("loss"):
             #output_refine = tf.reshape(self.output_data, [-1])
             output_refine = tf.split(1, sequece_length, self.output_data)
-            weigth = tf.ones_like(tf.concat(0,output_refine), dtype="float32")
-            loss = seq2seq.sequence_loss_by_example([self.new_scores], output_refine, [weigth],num_classes);
+            weigth = tf.split(1, sequece_length, tf.ones_like(self.output_data, dtype="float32"))
+
+            loss = seq2seq.sequence_loss_by_example(self.new_scores, output_refine, weigth,num_classes);
             self.loss = loss;
             #self.accuracy = tf.reduce_mean(tf.cast(tf.concat(0, accuracy), "float"))
 
@@ -80,13 +81,12 @@ with tf.Graph().as_default():
             #x_batch = np.array(x_batch);
             #y_batch = np.array(y_batch);
             feed_dict = {rnnobject.input_data:x_batch, rnnobject.output_data:y_batch}
-            _, loss_value,a, b = sess.run([train_op, 
-                                            rnnobject.loss, 
-                                            rnnobject.new_scores,
+            _, loss_value,a = sess.run([train_op,
+                                            rnnobject.loss,
                                             rnnobject.scores,
                                    #         rnnobject.predictions ],
                                             ],
                                             feed_dict=feed_dict)
-           # print loss_value
+            print loss_value
             print a
-            print b 
+
