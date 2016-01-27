@@ -9,7 +9,7 @@ class RNN(object):
         rnnCell = rnn_cell.BasicRNNCell(hidden_num)
         self.input_data = tf.placeholder(tf.int32, shape=[None, sequece_length], name = "input_data")
 
-        self.output_data = tf.placeholder(tf.float32, [None, sequece_length], name = "output_data")
+        self.output_data = tf.placeholder(tf.int32, [None, sequece_length], name = "output_data")
 
         input_refine = [tf.squeeze(input_, [1]) for input_ in tf.split(1, sequece_length, self.input_data)]
         self.inputs = []
@@ -19,43 +19,32 @@ class RNN(object):
             for i, v in enumerate(input_refine):
                 self.inputs.append(tf.nn.embedding_lookup(embedding, input_refine[i]))
                 
-            #inputs = tf.nn.embedding_lookup(embedding, input_refine[0])
-        #self.inputs = np.array(self.inputs) 
-#        state = rnnCell.zero_state(batch_size, tf.float32)
         self.output, self.states = rnn.rnn(rnnCell, self.inputs, dtype=tf.float32)
-        scores = [];
         predictions = [];
         with tf.name_scope("result"):
             W = tf.Variable(tf.truncated_normal([hidden_num, num_classes], stddev=0.1), name="W")
             b = tf.Variable(tf.constant(0.1, shape=[num_classes]), name="b")
-            for i in self.output:
-                score = tf.nn.xw_plus_b(i, W, b, name="score")
-                scores.append(score);
-                prediction = tf.argmax(score, 1);
-                predictions.append(prediction)
+            output = tf.reshape(tf.concat(1, self.output), [-1, hidden_num])
+            logits = tf.matmul(output, W) + b
+            self.scores = logits
+            self.new_scores = tf.reshape(tf.concat(0, [tf.squeeze(k, [1]) for k in tf.split(1, sequece_length, tf.reshape(logits, [-1, sequece_length ,num_classes]))]), [sequece_length, -1, num_classes])
 
-        self.scores = tf.reshape(tf.concat(1, scores), [-1, sequece_length, num_classes])
-        self.sco = tf.concat(0, scores);
-        self.predictions = tf.concat(0, predictions);
         losses = 0;
         accuracy = []
         with tf.name_scope("loss"):
-            output_refine = [tf.squeeze(k, [1]) for k in tf.split(1, sequece_length, self.output_data)]
-            for i, v in enumerate(scores):
-                losses += tf.nn.softmax_cross_entropy_with_logits(scores[i], output_refine[i])
-                accuracy.append(tf.equal(predictions[i], tf.argmax(output_refine[i],1)))
-            weigth = [1.0]*sequece_length
-            loss = seq2seq.sequence_loss_by_example(scores, self.output_data, num_classes);
-            #self.loss = tf.reduce_mean(losses)
+            #output_refine = tf.reshape(self.output_data, [-1])
+            output_refine = tf.split(1, sequece_length, self.output_data)
+            weigth = tf.ones_like(tf.concat(0,output_refine), dtype="float32")
+            loss = seq2seq.sequence_loss_by_example([self.new_scores], output_refine, [weigth],num_classes);
             self.loss = loss;
-            self.accuracy = tf.reduce_mean(tf.cast(tf.concat(0, accuracy), "float"))
+            #self.accuracy = tf.reduce_mean(tf.cast(tf.concat(0, accuracy), "float"))
 
 
 def batch_iter(in_data, batch_size, num_epochs):
     """
     Generates a batch iterator for a dataset.
     """
-    data = in_data
+    data = np.array(in_data)
     data_size = len(data)
     num_batches_per_epoch = int(len(data)/batch_size) + 1
     for epoch in range(num_epochs):
@@ -88,16 +77,16 @@ with tf.Graph().as_default():
         i = 0;
         for batch in batches:
             x_batch, y_batch = zip(*batch)
-            x_batch = np.array(x_batch);
-            y_batch = np.array(y_batch);
+            #x_batch = np.array(x_batch);
+            #y_batch = np.array(y_batch);
             feed_dict = {rnnobject.input_data:x_batch, rnnobject.output_data:y_batch}
-            _, loss_value,a,b,c = sess.run([train_op, 
+            _, loss_value,a, b = sess.run([train_op, 
                                             rnnobject.loss, 
+                                            rnnobject.new_scores,
                                             rnnobject.scores,
-                                            rnnobject.sco,
-                                            rnnobject.predictions ],
+                                   #         rnnobject.predictions ],
+                                            ],
                                             feed_dict=feed_dict)
-            print loss_value
+           # print loss_value
             print a
-            print b
-            print c
+            print b 

@@ -84,8 +84,8 @@ def load_data():
     pad_sentence, pad_labels = pad_sentences(x, y);
 
     voc, voc_inv = build_vocab(pad_sentence);
-
-    y_list = []
+    """ 
+     y_list = []
     for la in pad_labels:
         p = []
         for l in la:
@@ -93,9 +93,9 @@ def load_data():
             ve[int(l)] = 1;
             p.append(ve)
         y_list.append(p);
- 
+    """
     x = np.array([[voc[word] for word in sentence] for sentence in pad_sentence])
-    y = np.array(y_list)
+    y = np.array([[int(l) for l in sentence ]for sentence in pad_labels])
     vv = np.random.uniform(-1.0,1.0, len(voc)*400);
     W = np.float32(vv.reshape(len(voc), 400));
 
