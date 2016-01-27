@@ -1,6 +1,7 @@
 import tensorflow as tf
 from tensorflow.models.rnn import rnn_cell
 from tensorflow.models.rnn import rnn
+from tensorflow.models.rnn import seq2seq
 from input_data import *
 class RNN(object):
     def __init__(self, vocab_size, batch_size, sequece_length, embedding_size, num_classes):
@@ -8,7 +9,7 @@ class RNN(object):
         rnnCell = rnn_cell.BasicRNNCell(hidden_num)
         self.input_data = tf.placeholder(tf.int32, shape=[None, sequece_length], name = "input_data")
 
-        self.output_data = tf.placeholder(tf.float32, [None, sequece_length, num_classes], name = "output_data")
+        self.output_data = tf.placeholder(tf.float32, [None, sequece_length], name = "output_data")
 
         input_refine = [tf.squeeze(input_, [1]) for input_ in tf.split(1, sequece_length, self.input_data)]
         self.inputs = []
@@ -22,7 +23,6 @@ class RNN(object):
         #self.inputs = np.array(self.inputs) 
 #        state = rnnCell.zero_state(batch_size, tf.float32)
         self.output, self.states = rnn.rnn(rnnCell, self.inputs, dtype=tf.float32)
-
         scores = [];
         predictions = [];
         with tf.name_scope("result"):
@@ -33,16 +33,23 @@ class RNN(object):
                 scores.append(score);
                 prediction = tf.argmax(score, 1);
                 predictions.append(prediction)
-       
+
         self.scores = tf.reshape(tf.concat(1, scores), [-1, sequece_length, num_classes])
         self.sco = tf.concat(0, scores);
         self.predictions = tf.concat(0, predictions);
         losses = 0;
+        accuracy = []
         with tf.name_scope("loss"):
             output_refine = [tf.squeeze(k, [1]) for k in tf.split(1, sequece_length, self.output_data)]
             for i, v in enumerate(scores):
                 losses += tf.nn.softmax_cross_entropy_with_logits(scores[i], output_refine[i])
-            self.loss = tf.reduce_mean(losses)
+                accuracy.append(tf.equal(predictions[i], tf.argmax(output_refine[i],1)))
+            weigth = [1.0]*sequece_length
+            loss = seq2seq.sequence_loss_by_example(scores, self.output_data, num_classes);
+            #self.loss = tf.reduce_mean(losses)
+            self.loss = loss;
+            self.accuracy = tf.reduce_mean(tf.cast(tf.concat(0, accuracy), "float"))
+
 
 def batch_iter(in_data, batch_size, num_epochs):
     """
