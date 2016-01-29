@@ -45,7 +45,9 @@ class RNN(object):
             #self.accuracy = tf.reduce_mean(tf.cast(tf.concat(0, accuracy), "float"))
 
         with tf.name_scope("accurcy"):
-            self.precistions = tf.argmax(self.scores, 2)
+            self.predictions = tf.argmax(tf.reshape(self.scores, [-1, sequece_length, num_classes]), 2)
+            self.accuracy = tf.reduce_mean(tf.cast(tf.not_equal(self.predictions, tf.cast(self.output_data, "int64")), "float32"), name="accrucy")
+            #self.predictions = tf.reshape(self.scores, [sequece_length, -1, num_classes]);
 
 
 
@@ -56,7 +58,7 @@ def batch_iter(in_data, batch_size, num_epochs):
     data = np.array(in_data)
     data_size = len(data)
     #num_batches_per_epoch = int(len(data)/batch_size) + 1
-    num_batches_per_epoch = int(math.ceil(len(data)/batch_size))
+    num_batches_per_epoch = int(math.ceil(len(data)/float(batch_size)))
     for epoch in range(num_epochs):
         # Shuffle the data at each epoch
         #shuffle_indices = np.random.permutation(np.arange(data_size))
@@ -68,7 +70,7 @@ def batch_iter(in_data, batch_size, num_epochs):
 
 x,y,voc, voc_inv, w = load_data();
 vocab_size = len(voc_inv);
-batch_size = 10
+batch_size = 3
 embedding_size = 400;
 num_classes = 2;
 sequece_length = len(x[0]);
@@ -86,7 +88,6 @@ with tf.Graph().as_default():
     merged_summary_op = tf.merge_all_summaries()
 
     summary_writer = tf.train.SummaryWriter('/tmp/train_logs', sess.graph_def)
-    summary_writer = tf.train.SummaryWriter('/tmp/train_logs', sess.graph)
     with sess.as_default():
         init = tf.initialize_all_variables()
         sess.run(init)
@@ -95,16 +96,17 @@ with tf.Graph().as_default():
             x_batch, y_batch = zip(*batch)
             current_step = tf.train.global_step(sess, global_step)
             feed_dict = {rnnobject.input_data:x_batch, rnnobject.output_data:y_batch}
-            s, _, loss_value,a, b = sess.run([merged_summary_op, train_op,
+            s, _, loss_value,a, b, c = sess.run([merged_summary_op, train_op,
                                             rnnobject.loss,
                                             rnnobject.scores,
                                             rnnobject.predictions,
+                                            rnnobject.accuracy,
                                             ],
                                             feed_dict=feed_dict)
-            print b
+            print c
             if current_step % 100 == 0:
                 time_str = datetime.datetime.now().isoformat()
-                print("{}: step:{} loss:{}".format(time_str, current_step, loss_value))
+                print("{}: step:{} loss:{} acc: {}".format(time_str, current_step, loss_value, c))
                 summary_writer.add_summary(s, global_step=current_step)
             #print loss_value
 
