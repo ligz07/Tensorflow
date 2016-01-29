@@ -44,6 +44,10 @@ class RNN(object):
             self.loss = tf.reduce_sum(loss)/tf.cast(a, "float32")
             #self.accuracy = tf.reduce_mean(tf.cast(tf.concat(0, accuracy), "float"))
 
+        with tf.name_scope("accurcy"):
+            self.precistions = tf.argmax(self.scores, 2)
+
+
 
 def batch_iter(in_data, batch_size, num_epochs):
     """
@@ -68,7 +72,7 @@ batch_size = 10
 embedding_size = 400;
 num_classes = 2;
 sequece_length = len(x[0]);
-num_epoch = 10
+num_epoch = 1
 em = tf.Variable(w, name="embedding")
 with tf.Graph().as_default():
     rnnobject = RNN(vocab_size,batch_size, sequece_length, embedding_size, num_classes)
@@ -82,6 +86,7 @@ with tf.Graph().as_default():
     merged_summary_op = tf.merge_all_summaries()
 
     summary_writer = tf.train.SummaryWriter('/tmp/train_logs', sess.graph_def)
+    summary_writer = tf.train.SummaryWriter('/tmp/train_logs', sess.graph)
     with sess.as_default():
         init = tf.initialize_all_variables()
         sess.run(init)
@@ -90,12 +95,13 @@ with tf.Graph().as_default():
             x_batch, y_batch = zip(*batch)
             current_step = tf.train.global_step(sess, global_step)
             feed_dict = {rnnobject.input_data:x_batch, rnnobject.output_data:y_batch}
-            s, _, loss_value,a = sess.run([merged_summary_op, train_op,
+            s, _, loss_value,a, b = sess.run([merged_summary_op, train_op,
                                             rnnobject.loss,
                                             rnnobject.scores,
-                                   #         rnnobject.predictions ],
+                                            rnnobject.predictions,
                                             ],
                                             feed_dict=feed_dict)
+            print b
             if current_step % 100 == 0:
                 time_str = datetime.datetime.now().isoformat()
                 print("{}: step:{} loss:{}".format(time_str, current_step, loss_value))
