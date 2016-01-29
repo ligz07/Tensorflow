@@ -4,6 +4,8 @@ from tensorflow.models.rnn import rnn
 from tensorflow.models.rnn import seq2seq
 from input_data import *
 import math
+import time
+import datetime
 class RNN(object):
     def __init__(self, vocab_size, batch_size, sequece_length, embedding_size, num_classes):
         hidden_num = 30
@@ -62,10 +64,11 @@ def batch_iter(in_data, batch_size, num_epochs):
 
 x,y,voc, voc_inv, w = load_data();
 vocab_size = len(voc_inv);
-batch_size = 3
+batch_size = 10
 embedding_size = 400;
 num_classes = 2;
 sequece_length = len(x[0]);
+num_epoch = 10
 em = tf.Variable(w, name="embedding")
 with tf.Graph().as_default():
     rnnobject = RNN(vocab_size,batch_size, sequece_length, embedding_size, num_classes)
@@ -82,7 +85,7 @@ with tf.Graph().as_default():
     with sess.as_default():
         init = tf.initialize_all_variables()
         sess.run(init)
-        batches = batch_iter(zip(x, y), batch_size, 1)
+        batches = batch_iter(zip(x, y), batch_size, num_epoch)
         for batch in batches:
             x_batch, y_batch = zip(*batch)
             current_step = tf.train.global_step(sess, global_step)
@@ -93,6 +96,9 @@ with tf.Graph().as_default():
                                    #         rnnobject.predictions ],
                                             ],
                                             feed_dict=feed_dict)
-            summary_writer.add_summary(s, global_step=current_step)
+            if current_step % 100 == 0:
+                time_str = datetime.datetime.now().isoformat()
+                print("{}: step:{} loss:{}".format(time_str, current_step, loss_value))
+                summary_writer.add_summary(s, global_step=current_step)
             #print loss_value
 
