@@ -35,15 +35,18 @@ def pad_sentences(sentences, labels, padding_word="<PAD/>"):
     sequence_length = max(len(x) for x in sentences)
     padded_sentences = []
     padded_labels = []
+    padded_weights= []
     for i in range(len(sentences)):
         sentence = sentences[i]
         label = labels[i]
         num_padding = sequence_length - len(sentence)
         new_sentence = sentence + [padding_word] * num_padding
         new_labels = label + [0] * num_padding
+        weight = [1] * len(sentence) + [0] * num_padding
         padded_sentences.append(new_sentence)
         padded_labels.append(new_labels);
-    return padded_sentences, padded_labels
+        padded_weights.append(weight);
+    return padded_sentences, padded_labels, padded_weights
 
 def build_vocab(sentences):
     """
@@ -65,7 +68,7 @@ def load_data_and_labels():
     lable_inv = [];
     sent = []
     lables = []
-    file_object = codecs.open("data/output.small","r", "utf-8")
+    file_object = codecs.open("data/output","r", "utf-8")
     for line in file_object:
         arr = line.split("\t");
         if len(arr) < 2:
@@ -81,7 +84,7 @@ def load_data_and_labels():
 
 def load_data():
     x, y = load_data_and_labels()
-    pad_sentence, pad_labels = pad_sentences(x, y);
+    pad_sentence, pad_labels, pad_weights = pad_sentences(x, y);
 
     voc, voc_inv = build_vocab(pad_sentence);
     """ 
@@ -103,9 +106,10 @@ def load_data():
         v = get_word_vector(i);
         if v is not None:
             W[voc[i]] = v;
-    return [x, y, voc, voc_inv, W]
+    return [x, y, voc, voc_inv, W, pad_weights]
 
-#x,y,voc, voc_inv, w = load_data();
+#x,y,voc, voc_inv, w, p = load_data();
+#print p
 '''for key in voc_inv:
     print key.encode("utf-8");
 
