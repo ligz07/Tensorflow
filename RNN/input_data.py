@@ -18,7 +18,7 @@ class MyClass4(object):
         self.model =  gensim.models.Word2Vec.load("/home/guanglei/word2vec/wiki.zh.text.model");
 
 def get_word_vector(key):
-    return None
+#    return None
     class1 = MyClass4();
     model = class1.model;
     try:
@@ -61,14 +61,14 @@ def build_vocab(sentences):
     vocabulary = {x: i for i, x in enumerate(vocabulary_inv)}
     return [vocabulary, vocabulary_inv]
 
-def load_data_and_labels():
+def load_data_and_labels(file_name):
     x_text = [];
     y_list = [];
     dict_label = {};
     lable_inv = [];
     sent = []
     lables = []
-    file_object = codecs.open("data/output","r", "utf-8")
+    file_object = codecs.open(file_name,"r", "utf-8")
     for line in file_object:
         arr = line.split("\t");
         if len(arr) < 2:
@@ -83,7 +83,11 @@ def load_data_and_labels():
     return x_text, y_list
 
 def load_data():
-    x, y = load_data_and_labels()
+    x, y = load_data_and_labels("data/train")
+    dev_x, dev_y = load_data_and_labels("data/test")
+    dev_num = len(dev_x);
+    x += dev_x;
+    y += dev_y;
     pad_sentence, pad_labels, pad_weights = pad_sentences(x, y);
 
     voc, voc_inv = build_vocab(pad_sentence);
@@ -106,10 +110,18 @@ def load_data():
         v = get_word_vector(i);
         if v is not None:
             W[voc[i]] = v;
-    return [x, y, voc, voc_inv, W, pad_weights]
+    dev_x = x[-dev_num:]
+    dev_y = y[-dev_num:]
+    x = x[:-dev_num];
+    y = y[:-dev_num];
+    dev_pad = pad_weights[-dev_num:]
+    pad_weights = pad_weights[:-dev_num]
+    return [x, y, voc, voc_inv, W, pad_weights, dev_x, dev_y, dev_pad]
 
-#x,y,voc, voc_inv, w, p = load_data();
-#print p
+#print dx
+#for s in dx:
+#    for k in s:
+#        print voc_inv[k].encode("utf-8");
 '''for key in voc_inv:
     print key.encode("utf-8");
 
