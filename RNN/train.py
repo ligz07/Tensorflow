@@ -8,10 +8,15 @@ import time
 import datetime
 class RNN(object):
     def __init__(self, vocab_size, batch_size, sequece_length, embedding_size, num_classes):
-        hidden_num = 20
+        self.hyperParam = {}
+        self.hyperParam["hidden_num"] = 20
+        self.hyperParam["l2_lamda"] = 3;
+        self.hyperParam["dropout_keep_prob"] = 0.5;
         l2_loss = tf.constant(0.0)
+        
+        self.dropout_keep_prob = 0.5
         ##rnnCell = rnn_cell.BasicRNNCell(hidden_num)
-        rnnCell = rnn_cell.BasicLSTMCell(hidden_num, forget_bias=1.0) 
+        rnnCell = rnn_cell.BasicLSTMCell(self.hyperParam["hidden_num"], forget_bias=1.0) 
         self.input_data = tf.placeholder(tf.int32, shape=[None, sequece_length], name = "input_data")
         self.weights = tf.placeholder(tf.int32, shape=[None, sequece_length], name= "weights")
         self.output_data = tf.placeholder(tf.int32, [None, sequece_length], name = "output_data")
@@ -25,14 +30,20 @@ class RNN(object):
             #    self.inputs.append(tf.nn.embedding_lookup(embedding, input_refine[i]))
         self.inputs = [tf.squeeze(input_, [1]) for input_ in tf.split(1, sequece_length, inputs)]
         self.output, self.states = rnn.rnn(rnnCell, self.inputs, dtype=tf.float32)
+
+        # Add dropout
+        with tf.name_scope("dropout"):
+            self.h_drop = [tf.nn.dropout(p, self.hyperParam["dropout_keep_prob"]) for p in self.output]
+
         predictions = [];
         with tf.name_scope("result"):
-            W = tf.Variable(tf.truncated_normal([hidden_num, num_classes], stddev=0.1), name="W")
+            W = tf.Variable(tf.truncated_normal([self.hyperParam["hidden_num"], num_classes], stddev=0.1), name="W")
             b = tf.Variable(tf.constant(0.1, shape=[num_classes]), name="b")
             
             l2_loss += tf.nn.l2_loss(W)
             l2_loss += tf.nn.l2_loss(b)
-            output = tf.reshape(tf.concat(1, self.output), [-1, hidden_num])
+            #output = tf.reshape(tf.concat(1, self.output), [-1, hidden_num])
+            output = tf.reshape(tf.concat(1, self.h_drop), [-1, self.hyperParam["hidden_num"]])
             logits = tf.matmul(output, W) + b
             self.scores = logits
             #self.new_scores = [tf.squeeze(k, [1]) for k in tf.split(1, sequece_length, tf.reshape(logits, [-1, sequece_length ,num_classes]))]
@@ -45,7 +56,7 @@ class RNN(object):
             #weigth = tf.ones_like(output_refine, dtype="float32")
             weight = tf.reshape(tf.cast(self.weights, "float32"), [-1])
             loss = seq2seq.sequence_loss_by_example([self.scores], [output_refine], [weight],num_classes);
-            self.loss = tf.reduce_sum(loss)/tf.cast(a, "float32") + 3*l2_loss
+            self.loss = tf.reduce_sum(loss)/tf.cast(a, "float32") + self.hyperParam["l2_lamda"]*l2_loss
             #self.accuracy = tf.reduce_mean(tf.cast(tf.concat(0, accuracy), "float"))
 
         with tf.name_scope("accurcy"):
@@ -57,7 +68,11 @@ class RNN(object):
              
             self.accuracy = tf.reduce_mean(tf.cast(tf.equal(self.predictions, tf.cast(self.output_data, "int64")), "float32"), name="accrucy")
             #self.predictions = tf.reshape(self.scores, [sequece_length, -1, num_classes]);
-
+    def getHyperParameter(self):
+        strHyper = "";
+        for k in self.hyperParam.keys():
+            strHyper += "-{}_{}".format(k, self.hyperParam[k]);
+        return strHyper
 
 
 def batch_iter(in_data, batch_size, num_epochs):
@@ -99,9 +114,10 @@ with tf.Graph().as_default():
     loss_sum = tf.scalar_summary("loss", rnnobject.loss)
     acc = tf.scalar_summary("accuracy", rnnobject.kk)
     merged_summary_op = tf.merge_all_summaries()
-    summary_writer_t = tf.train.SummaryWriter('/tmp/train_logs/train_t', sess.graph_def) 
-    summary_writer = tf.train.SummaryWriter('/tmp/train_logs/train', sess.graph_def)
-    summary_writer_dev = tf.train.SummaryWriter('/tmp/train_logs/dev', sess.graph_def)
+    strFolderName = rnnobject.getHyperParameter();
+    summary_writer_t = tf.train.SummaryWriter("/tmp/{}/train_t".format(strFolderName), sess.graph_def) 
+    summary_writer = tf.train.SummaryWriter("/tmp/{}/train".format(strFolderName), sess.graph_def)
+    summary_writer_dev = tf.train.SummaryWriter("/tmp/{}/dev".format(strFolderName), sess.graph_def)
     with sess.as_default():
         init = tf.initialize_all_variables()
         sess.run(init)
